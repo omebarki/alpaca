@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 )
 
 var BuildVersion string
@@ -58,7 +59,7 @@ func main() {
 	port := flag.Int("p", 3128, "port number to listen on")
 	pacurl := flag.String("C", "", "url of proxy auto-config (pac) file")
 	domain := flag.String("d", "", "domain of the proxy account (for NTLM auth)")
-	username := flag.String("u", whoAmI(), "username of the proxy account (for NTLM auth)")
+	username := flag.String("u", whoAmI(), "username or login:password for proxy auth")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
 	kerberosWait := flag.Int("w", 30, "seconds to wait for a Kerberos ticket (macOS only)")
 	version := flag.Bool("version", false, "print version number")
@@ -74,21 +75,29 @@ func main() {
 		os.Exit(0)
 	}
 
-	var src credentialSource
-	if *domain != "" {
-		src = fromTerminal().forUser(*domain, *username)
-	} else if value := os.Getenv("NTLM_CREDENTIALS"); value != "" {
-		src = fromEnvVar(value)
-	} else {
-		src = fromKeyring()
-	}
-
+	var basicAuth *basicAuthenticator
 	var a *authenticator
-	if src != nil {
-		var err error
-		a, err = src.getCredentials()
-		if err != nil {
-			log.Printf("Credentials not found, disabling proxy auth: %v", err)
+
+	if strings.Contains(*username, ":") {
+		// -u login:password → Basic proxy authentication
+		basicAuth = newBasicAuthenticator(*username)
+		log.Println("Basic proxy authentication configured")
+	} else {
+		// Existing NTLM credential sources
+		var src credentialSource
+		if *domain != "" {
+			src = fromTerminal().forUser(*domain, *username)
+		} else if value := os.Getenv("NTLM_CREDENTIALS"); value != "" {
+			src = fromEnvVar(value)
+		} else {
+			src = fromKeyring()
+		}
+		if src != nil {
+			var err error
+			a, err = src.getCredentials()
+			if err != nil {
+				log.Printf("Credentials not found, disabling proxy auth: %v", err)
+			}
 		}
 	}
 
@@ -102,14 +111,21 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Try Kerberos/Negotiate auth first, fall back to NTLM
-	var auth proxyAuthenticator
+	// Build auth chain: Kerberos → Basic → NTLM.
+	// The multi-authenticator tries each method in order on 407 and caches
+	// which method works for each proxy host.
+	var methods []proxyAuthenticator
 	if neg := newNegotiateAuthenticator(*kerberosWait); neg != nil {
-		log.Println("Using Kerberos/Negotiate authentication")
-		auth = neg
-	} else if a != nil {
-		auth = a
+		log.Println("Kerberos/Negotiate authentication available")
+		methods = append(methods, neg)
 	}
+	if basicAuth != nil {
+		methods = append(methods, basicAuth)
+	}
+	if a != nil {
+		methods = append(methods, a)
+	}
+	auth := newMultiAuthenticator(methods...)
 
 	errch := make(chan error)
 
