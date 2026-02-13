@@ -60,6 +60,7 @@ func main() {
 	domain := flag.String("d", "", "domain of the proxy account (for NTLM auth)")
 	username := flag.String("u", whoAmI(), "username of the proxy account (for NTLM auth)")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
+	kerberosWait := flag.Int("w", 0, "seconds to wait for a Kerberos ticket (macOS only)")
 	version := flag.Bool("version", false, "print version number")
 	flag.Parse()
 
@@ -101,9 +102,18 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Try Kerberos/Negotiate auth first, fall back to NTLM
+	var auth proxyAuthenticator
+	if neg := newNegotiateAuthenticator(*kerberosWait); neg != nil {
+		log.Println("Using Kerberos/Negotiate authentication")
+		auth = neg
+	} else if a != nil {
+		auth = a
+	}
+
 	errch := make(chan error)
 
-	s := createServer(*port, *pacurl, a)
+	s := createServer(*port, *pacurl, auth)
 	for _, host := range hosts {
 		address := net.JoinHostPort(host, strconv.Itoa(*port))
 		for _, network := range networks(host) {
@@ -122,10 +132,10 @@ func main() {
 	log.Fatal(<-errch)
 }
 
-func createServer(port int, pacurl string, a *authenticator) *http.Server {
+func createServer(port int, pacurl string, auth proxyAuthenticator) *http.Server {
 	pacWrapper := NewPACWrapper(PACData{Port: port})
 	proxyFinder := NewProxyFinder(pacurl, pacWrapper)
-	proxyHandler := NewProxyHandler(a, getProxyFromContext, proxyFinder.blockProxy)
+	proxyHandler := NewProxyHandler(auth, getProxyFromContext, proxyFinder.blockProxy)
 	mux := http.NewServeMux()
 	pacWrapper.SetupHandlers(mux)
 
