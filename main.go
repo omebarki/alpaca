@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -62,8 +63,13 @@ func main() {
 	username := flag.String("u", whoAmI(), "username or login:password for proxy auth")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
 	kerberosWait := flag.Int("w", 30, "seconds to wait for a Kerberos ticket (macOS only)")
+	quiet := flag.Bool("q", false, "quiet mode, suppress all log output")
 	version := flag.Bool("version", false, "print version number")
 	flag.Parse()
+
+	if *quiet {
+		log.SetOutput(io.Discard)
+	}
 
 	// default to localhost if no hosts are specified
 	if len(hosts) == 0 {
