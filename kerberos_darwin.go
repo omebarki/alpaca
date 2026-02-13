@@ -160,7 +160,7 @@ func checkKerberosTicket() bool {
 func waitForKerberosTicket(timeoutSeconds int) bool {
 	deadline := time.Now().Add(time.Duration(timeoutSeconds) * time.Second)
 	for time.Now().Before(deadline) {
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 		if checkKerberosTicket() {
 			return true
 		}

@@ -60,7 +60,7 @@ func main() {
 	domain := flag.String("d", "", "domain of the proxy account (for NTLM auth)")
 	username := flag.String("u", whoAmI(), "username of the proxy account (for NTLM auth)")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
-	kerberosWait := flag.Int("w", 0, "seconds to wait for a Kerberos ticket (macOS only)")
+	kerberosWait := flag.Int("w", 30, "seconds to wait for a Kerberos ticket (macOS only)")
 	version := flag.Bool("version", false, "print version number")
 	flag.Parse()
 
