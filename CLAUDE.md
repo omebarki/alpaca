@@ -174,6 +174,7 @@ Triggered on tags matching `v*`. Creates a GitHub release and uploads platform-s
 | `-d`        | (none)       | NTLM domain                                    |
 | `-u`        | current user | Username or `login:password` for basic auth    |
 | `-H`        | false        | Print hashed NTLM credentials and exit         |
+| `-k`        | false        | Enable Kerberos/Negotiate authentication (macOS)|
 | `-w`        | `30`         | Kerberos ticket wait time in seconds (macOS)   |
 | `-q`        | false        | Quiet mode — suppress all log output           |
 | `-version`  | false        | Print version and exit                         |
