@@ -62,6 +62,7 @@ func main() {
 	domain := flag.String("d", "", "domain of the proxy account (for NTLM auth)")
 	username := flag.String("u", whoAmI(), "username or login:password for proxy auth")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
+	kerberos := flag.Bool("k", false, "enable Kerberos/Negotiate proxy authentication (macOS only)")
 	kerberosWait := flag.Int("w", 30, "seconds to wait for a Kerberos ticket (macOS only)")
 	quiet := flag.Bool("q", false, "quiet mode, suppress all log output")
 	version := flag.Bool("version", false, "print version number")
@@ -121,9 +122,11 @@ func main() {
 	// The multi-authenticator tries each method in order on 407 and caches
 	// which method works for each proxy host.
 	var methods []proxyAuthenticator
-	if neg := newNegotiateAuthenticator(*kerberosWait); neg != nil {
-		log.Println("Kerberos/Negotiate authentication available")
-		methods = append(methods, neg)
+	if *kerberos {
+		if neg := newNegotiateAuthenticator(*kerberosWait); neg != nil {
+			log.Println("Kerberos/Negotiate authentication available")
+			methods = append(methods, neg)
+		}
 	}
 	if basicAuth != nil {
 		methods = append(methods, basicAuth)
