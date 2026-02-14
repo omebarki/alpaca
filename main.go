@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/user"
 	"strconv"
-	"strings"
 )
 
 var BuildVersion string
@@ -60,7 +59,8 @@ func main() {
 	port := flag.Int("p", 3128, "port number to listen on")
 	pacurl := flag.String("C", "", "url of proxy auto-config (pac) file")
 	domain := flag.String("d", "", "domain of the proxy account (for NTLM auth)")
-	username := flag.String("u", whoAmI(), "username or login:password for proxy auth")
+	username := flag.String("u", whoAmI(), "username for proxy auth (NTLM)")
+	basicCreds := flag.String("b", "", "login:password for basic proxy auth")
 	printHash := flag.Bool("H", false, "print hashed NTLM credentials for non-interactive use")
 	kerberos := flag.Bool("k", false, "enable Kerberos/Negotiate proxy authentication (macOS only)")
 	kerberosWait := flag.Int("w", 30, "seconds to wait for a Kerberos ticket (macOS only)")
@@ -85,26 +85,25 @@ func main() {
 	var basicAuth *basicAuthenticator
 	var a *authenticator
 
-	if strings.Contains(*username, ":") {
-		// -u login:password → Basic proxy authentication
-		basicAuth = newBasicAuthenticator(*username)
+	if *basicCreds != "" {
+		basicAuth = newBasicAuthenticator(*basicCreds)
 		log.Println("Basic proxy authentication configured")
+	}
+
+	// NTLM credential sources
+	var src credentialSource
+	if *domain != "" {
+		src = fromTerminal().forUser(*domain, *username)
+	} else if value := os.Getenv("NTLM_CREDENTIALS"); value != "" {
+		src = fromEnvVar(value)
 	} else {
-		// Existing NTLM credential sources
-		var src credentialSource
-		if *domain != "" {
-			src = fromTerminal().forUser(*domain, *username)
-		} else if value := os.Getenv("NTLM_CREDENTIALS"); value != "" {
-			src = fromEnvVar(value)
-		} else {
-			src = fromKeyring()
-		}
-		if src != nil {
-			var err error
-			a, err = src.getCredentials()
-			if err != nil {
-				log.Printf("Credentials not found, disabling proxy auth: %v", err)
-			}
+		src = fromKeyring()
+	}
+	if src != nil {
+		var err error
+		a, err = src.getCredentials()
+		if err != nil {
+			log.Printf("Credentials not found, disabling proxy auth: %v", err)
 		}
 	}
 

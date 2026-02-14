@@ -58,9 +58,13 @@ Start Alpaca by running the `alpaca` binary.
 
 If the proxy server requires valid authentication credentials, you can provide them by means of:
 
-- the shell prompt, if `-d` is passed,
-- the shell environment, if `NTLM_CREDENTIALS` is set,
+- basic proxy authentication, if `-b login:password` is passed,
+- the shell prompt (for NTLM), if `-d` is passed,
+- the shell environment (for NTLM), if `NTLM_CREDENTIALS` is set,
 - the system keyring (macOS, Windows and Linux/GNOME supported), if none of the above applies.
+
+Multiple authentication methods can be enabled simultaneously. The multi-authenticator
+tries each method in order (Kerberos, Basic, NTLM) and caches which method works per proxy.
 
 Otherwise, the authentication with proxy will be simply ignored.
 
@@ -126,7 +130,8 @@ can set this manually using the `-C` flag.
 | `-p` | `3128` | Port number to listen on |
 | `-C` | (none) | URL of proxy auto-config (PAC) file |
 | `-d` | (none) | Domain of the proxy account (for NTLM auth) |
-| `-u` | current user | Username or `login:password` for proxy auth |
+| `-u` | current user | Username for proxy auth (NTLM) |
+| `-b` | (none) | `login:password` for basic proxy auth |
 | `-H` | `false` | Print hashed NTLM credentials and exit |
 | `-k` | `false` | Enable Kerberos/Negotiate proxy authentication (macOS only) |
 | `-w` | `30` | Seconds to wait for a Kerberos ticket (macOS only) |

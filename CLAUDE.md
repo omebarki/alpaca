@@ -172,7 +172,8 @@ Triggered on tags matching `v*`. Creates a GitHub release and uploads platform-s
 | `-p`        | `3128`       | Port number                                    |
 | `-C`        | (none)       | PAC file URL override                          |
 | `-d`        | (none)       | NTLM domain                                    |
-| `-u`        | current user | Username or `login:password` for basic auth    |
+| `-u`        | current user | Username for proxy auth (NTLM)                 |
+| `-b`        | (none)       | `login:password` for basic proxy auth           |
 | `-H`        | false        | Print hashed NTLM credentials and exit         |
 | `-k`        | false        | Enable Kerberos/Negotiate authentication (macOS)|
 | `-w`        | `30`         | Kerberos ticket wait time in seconds (macOS)   |
